@@ -1,6 +1,7 @@
 package he
 
 import (
+	"crypto/rand"
 	"math/big"
 
 	"github.com/bwesterb/go-ristretto"
@@ -9,6 +10,7 @@ import (
 // The prime order of the base point is 2^252 + 27742317777372353535851937790883648493.
 var n25519, _ = new(big.Int).SetString("7237005577332262213973186563042994240857116359379907606001950938285454250989", 10)
 
+// CommitTo 承诺函数
 // C = rG + xH
 // Commit to a value x
 // H - Random secondary point on the curve
@@ -36,7 +38,7 @@ func CommitTo(H *ristretto.Point, r, x *ristretto.Scalar) *ristretto.Point {
 	return result
 }
 
-// Generate a random point on the curve
+// GenerateH Generate a random point on the curve
 func GenerateH() *ristretto.Point {
 	random := new(ristretto.Scalar).Rand()
 	H := new(ristretto.Point)
@@ -73,6 +75,7 @@ func GenerateH() *ristretto.Point {
 // 	return result
 // }
 
+// AddMoreThanTwo 多于两个相加
 func AddMoreThanTwo(cN []*ristretto.Point) *ristretto.Point {
 
 	addPoint := new(ristretto.Point).Add(cN[0], cN[1])
@@ -83,6 +86,7 @@ func AddMoreThanTwo(cN []*ristretto.Point) *ristretto.Point {
 	return addPoint
 }
 
+// AddPrivatelyMoreThanTwo 多于两个私钥相加
 func AddPrivatelyMoreThanTwo(H *ristretto.Point, rN []*ristretto.Scalar, xN []*big.Int) *ristretto.Point {
 	rDif := new(ristretto.Scalar).Add(rN[0], rN[1])
 	for i := 2; i < len(rN); i++ {
@@ -106,4 +110,22 @@ func AddPrivatelyMoreThanTwo(H *ristretto.Point, rN []*ristretto.Scalar, xN []*b
 	result.Add(rPoint, xPoint)
 
 	return result
+}
+
+// GetRandomBigInt 生成指定长度的随机切片
+func GetRandomBigInt(sliceLength uint) (serialNumber *big.Int) {
+
+	max := new(big.Int).Lsh(big.NewInt(1), sliceLength)
+	// 以下一行仅供测试显示max值
+	// fmt.Println(max)
+
+	// 生成大整数随机数
+	serialNumber, _ = rand.Int(rand.Reader, max)
+	// 以下一行仅供测试显示serialNumber值
+	// fmt.Println(serialNumber)
+
+	// 以下两行为第一版生成随机数的过程，返回[]byte
+	// randomBytesSlice = make([]byte, sliceLength)
+	// rand.Read(randomBytesSlice)
+	return
 }

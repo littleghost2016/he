@@ -1,64 +1,436 @@
 package he
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/bwesterb/go-ristretto"
 )
 
-func TestXN(t *testing.T) {
+func BenchmarkCommitTo512Bit(b *testing.B) {
 
-	xNString := []string{
-		"1",
-		"444444444444",
-		"2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397376",
-		"2",
-		"34234",
-	}
-	// 给定一组x的值，每个值为字符串类型
-
-	xN := make([]*big.Int, len(xNString))
-	rN := make([]*ristretto.Scalar, len(xNString))
-	cN := make([]*ristretto.Point, len(xNString))
-	// xN rN cN中每个指针对应的值是一一对应的
-	// fmt.Println("xN, rN, cN", xN, rN, cN)
+	// 获取随机生成的指定长度的x
+	x := GetRandomBigInt(512)
 
 	H := GenerateH()
-	// 生成H
-	// fmt.Println("H", H)
 
-	for i := 0; i < len(xN); i++ {
-		xN[i], _ = new(big.Int).SetString(xNString[i], 10)
-		// 将字符串转成大数表示的方法
-		// fmt.Println(xN[i])
+	// 随机产生r
+	r := new(ristretto.Scalar).Rand()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = CommitTo(H, r, new(ristretto.Scalar).SetBigInt(x))
+	}
+
+}
+
+func BenchmarkAddMoreThanTwo512Bit(b *testing.B) {
+
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		xN[i] = GetRandomBigInt(512)
 
 		rN[i] = new(ristretto.Scalar).Rand()
-		// 随机产生r
-		// fmt.Println("rN[i]", rN[i])
 
 		cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddMoreThanTwo(cN)
+	}
+
+}
+
+func BenchmarkAddPrivatelyMoreThanTwo512Bit(b *testing.B) {
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	// cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		xN[i] = GetRandomBigInt(512)
+
+		rN[i] = new(ristretto.Scalar).Rand()
+
+		// cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddPrivatelyMoreThanTwo(H, rN, xN)
+	}
+}
+
+func BenchmarkCheckIfEqual512Bit(b *testing.B) {
+
+	// 表示需要做几次加法
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		// 将字符串转成大数表示的方法
+		xN[i] = GetRandomBigInt(512)
+		// 以下一行仅供测试显示xN[i]的值
+		// fmt.Println(xN[i])
+
+		// 随机产生r
+		rN[i] = new(ristretto.Scalar).Rand()
+		// 以下一行仅供测试显示rN[i]的值
+		// fmt.Println("rN[i]", rN[i])
+
 		// 通过CommitTo函数进行计算密文C
-		fmt.Println("xN[i]: ", xN[i], "rN[i]: ", rN[i], "cN[i]: ", cN[i])
+		cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+		// 以下一行仅供测试显示xN[i], rN[i], cN[i]的值
+		// b.Log("xN[i]: ", xN[i], "rN[i]: ", rN[i], "cN[i]: ", cN[i])
 	}
 
 	C1 := AddMoreThanTwo(cN)
 	// 密文相加（先加密后相加）
 
-	startTime := time.Now().UnixNano()
 	C2 := AddPrivatelyMoreThanTwo(H, rN, xN)
 	// 参数相加（先相加后加密）
 
-	fmt.Println("C1: ", C1, "C2: ", C2)
-	if C2.Equals(C1) {
-		// 判断计算结果是否相等
-		fmt.Println("equal")
-	} else {
-		fmt.Println("not equal")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if !C2.Equals(C1) {
+			b.Error("Not Equal!")
+		}
+	}
+}
+
+func BenchmarkCommitTo1024Bit(b *testing.B) {
+
+	// 获取随机生成的指定长度的x
+	x := GetRandomBigInt(1024)
+
+	H := GenerateH()
+
+	// 随机产生r
+	r := new(ristretto.Scalar).Rand()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = CommitTo(H, r, new(ristretto.Scalar).SetBigInt(x))
 	}
 
-	endTime := time.Now().UnixNano()
-	fmt.Println("第二个耗时：（纳秒）", endTime-startTime)
+}
+
+func BenchmarkAddMoreThanTwo1024Bit(b *testing.B) {
+
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		xN[i] = GetRandomBigInt(1024)
+
+		rN[i] = new(ristretto.Scalar).Rand()
+
+		cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddMoreThanTwo(cN)
+	}
+
+}
+
+func BenchmarkAddPrivatelyMoreThanTwo1024Bit(b *testing.B) {
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	// cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		xN[i] = GetRandomBigInt(1024)
+
+		rN[i] = new(ristretto.Scalar).Rand()
+
+		// cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddPrivatelyMoreThanTwo(H, rN, xN)
+	}
+}
+
+func BenchmarkCheckIfEqual1024Bit(b *testing.B) {
+
+	// 表示需要做几次加法
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		// 将字符串转成大数表示的方法
+		xN[i] = GetRandomBigInt(1024)
+		// 以下一行仅供测试显示xN[i]的值
+		// fmt.Println(xN[i])
+
+		// 随机产生r
+		rN[i] = new(ristretto.Scalar).Rand()
+		// 以下一行仅供测试显示rN[i]的值
+		// fmt.Println("rN[i]", rN[i])
+
+		// 通过CommitTo函数进行计算密文C
+		cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+		// 以下一行仅供测试显示xN[i], rN[i], cN[i]的值
+		// b.Log("xN[i]: ", xN[i], "rN[i]: ", rN[i], "cN[i]: ", cN[i])
+	}
+
+	C1 := AddMoreThanTwo(cN)
+	// 密文相加（先加密后相加）
+
+	C2 := AddPrivatelyMoreThanTwo(H, rN, xN)
+	// 参数相加（先相加后加密）
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if !C2.Equals(C1) {
+			b.Error("Not Equal!")
+		}
+	}
+}
+
+func BenchmarkCommitTo2048Bit(b *testing.B) {
+
+	// 获取随机生成的指定长度的x
+	x := GetRandomBigInt(2048)
+
+	H := GenerateH()
+
+	// 随机产生r
+	r := new(ristretto.Scalar).Rand()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = CommitTo(H, r, new(ristretto.Scalar).SetBigInt(x))
+	}
+
+}
+
+func BenchmarkAddMoreThanTwo2048Bit(b *testing.B) {
+
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		xN[i] = GetRandomBigInt(2048)
+
+		rN[i] = new(ristretto.Scalar).Rand()
+
+		cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddMoreThanTwo(cN)
+	}
+
+}
+
+func BenchmarkAddPrivatelyMoreThanTwo2048Bit(b *testing.B) {
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	// cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		xN[i] = GetRandomBigInt(2048)
+
+		rN[i] = new(ristretto.Scalar).Rand()
+
+		// cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddPrivatelyMoreThanTwo(H, rN, xN)
+	}
+}
+
+func BenchmarkCheckIfEqual2048Bit(b *testing.B) {
+
+	// 表示需要做几次加法
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		// 将字符串转成大数表示的方法
+		xN[i] = GetRandomBigInt(2048)
+		// 以下一行仅供测试显示xN[i]的值
+		// fmt.Println(xN[i])
+
+		// 随机产生r
+		rN[i] = new(ristretto.Scalar).Rand()
+		// 以下一行仅供测试显示rN[i]的值
+		// fmt.Println("rN[i]", rN[i])
+
+		// 通过CommitTo函数进行计算密文C
+		cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+		// 以下一行仅供测试显示xN[i], rN[i], cN[i]的值
+		// b.Log("xN[i]: ", xN[i], "rN[i]: ", rN[i], "cN[i]: ", cN[i])
+	}
+
+	C1 := AddMoreThanTwo(cN)
+	// 密文相加（先加密后相加）
+
+	C2 := AddPrivatelyMoreThanTwo(H, rN, xN)
+	// 参数相加（先相加后加密）
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if !C2.Equals(C1) {
+			b.Error("Not Equal!")
+		}
+	}
+}
+
+func BenchmarkCommitTo4096Bit(b *testing.B) {
+
+	// 获取随机生成的指定长度的x
+	x := GetRandomBigInt(4096)
+
+	H := GenerateH()
+
+	// 随机产生r
+	r := new(ristretto.Scalar).Rand()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = CommitTo(H, r, new(ristretto.Scalar).SetBigInt(x))
+	}
+
+}
+
+func BenchmarkAddMoreThanTwo4096Bit(b *testing.B) {
+
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		xN[i] = GetRandomBigInt(4096)
+
+		rN[i] = new(ristretto.Scalar).Rand()
+
+		cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddMoreThanTwo(cN)
+	}
+
+}
+
+func BenchmarkAddPrivatelyMoreThanTwo4096Bit(b *testing.B) {
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	// cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		xN[i] = GetRandomBigInt(4096)
+
+		rN[i] = new(ristretto.Scalar).Rand()
+
+		// cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = AddPrivatelyMoreThanTwo(H, rN, xN)
+	}
+}
+
+func BenchmarkCheckIfEqual4096Bit(b *testing.B) {
+
+	// 表示需要做几次加法
+	number := 2
+
+	xN := make([]*big.Int, number)
+	rN := make([]*ristretto.Scalar, number)
+	cN := make([]*ristretto.Point, number)
+
+	H := GenerateH()
+
+	for i := 0; i < number; i++ {
+		// 将字符串转成大数表示的方法
+		xN[i] = GetRandomBigInt(4096)
+		// 以下一行仅供测试显示xN[i]的值
+		// fmt.Println(xN[i])
+
+		// 随机产生r
+		rN[i] = new(ristretto.Scalar).Rand()
+		// 以下一行仅供测试显示rN[i]的值
+		// fmt.Println("rN[i]", rN[i])
+
+		// 通过CommitTo函数进行计算密文C
+		cN[i] = CommitTo(H, rN[i], new(ristretto.Scalar).SetBigInt(xN[i]))
+		// 以下一行仅供测试显示xN[i], rN[i], cN[i]的值
+		// b.Log("xN[i]: ", xN[i], "rN[i]: ", rN[i], "cN[i]: ", cN[i])
+	}
+
+	C1 := AddMoreThanTwo(cN)
+	// 密文相加（先加密后相加）
+
+	C2 := AddPrivatelyMoreThanTwo(H, rN, xN)
+	// 参数相加（先相加后加密）
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if !C2.Equals(C1) {
+			b.Error("Not Equal!")
+		}
+	}
 }
